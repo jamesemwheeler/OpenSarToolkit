@@ -13,5 +13,3 @@ scipy
 shapely
 tqdm
 imageio
-joblib
-pytest

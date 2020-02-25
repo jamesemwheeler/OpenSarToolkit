@@ -8,7 +8,6 @@ import ogr
 import pyproj
 import geopandas as gpd
 
-from osgeo import osr
 from shapely.ops import transform
 from shapely.wkt import loads
 from shapely.geometry import Point, Polygon, mapping, shape
@@ -67,10 +66,10 @@ def get_proj4(prjfile):
 
 
 def epsg_to_wkt_projection(epsg_code):
-
+    
     spatial_ref = osr.SpatialReference()
-    spatial_ref.ImportFromEPSG(epsg_code)
-
+    spatial_ref.ImportFromEPSG(epsg_code)  
+            
     return spatial_ref.ExpotToWkt()
 
 
@@ -264,40 +263,50 @@ def shp_to_gdf(shapefile):
 
 
 def wkt_to_gdf(wkt):
-
-    if loads(wkt).geom_type == 'Point':
+    
+    geometry = loads(wkt)
+    # point wkt
+    if geometry.geom_type == 'Point':
         data = {'id': ['1'],
                 'geometry': loads(wkt).buffer(0.05).envelope}
         gdf = gpd.GeoDataFrame(data)
-
-    elif loads(wkt).geom_type == 'Polygon':
+    
+    # polygon wkt
+    elif geometry.geom_type == 'Polygon':
         data = {'id': ['1'],
                 'geometry': loads(wkt)}
         gdf = gpd.GeoDataFrame(data)
 
-    elif loads(wkt).geom_type == 'GeometryCollection' and len(loads(wkt)) == 1:
+    # geometry collection of single multiploygon
+    elif geometry.geom_type == 'GeometryCollection' and len(geometry) == 1 and 'MULTIPOLYGON' in str(geometry):
 
         data = {'id': ['1'],
-                'geometry': loads(wkt)}
-        gdf = gpd.GeoDataFrame(data)
+                'geometry': geometry}
+        gdf = gpd.GeoDataFrame(data, crs = {'init': 'epsg:4326',  'no_defs': True})
+        
+        ids, feats =[], []
+        for i, feat in enumerate(gdf.geometry.values[0]):
+            ids.append(i)
+            feats.append(feat)
 
-        # split the different elemets and put into single features
-        if len(gdf) > 1:
-            ids, feats =[], []
+        gdf = gpd.GeoDataFrame({'id': ids,
+                                'geometry': feats}, 
+                                 geometry='geometry', 
+                                 crs = gdf.crs
+                                  )
+    
+    # geometry collection of single polygon
+    elif geometry.geom_type == 'GeometryCollection' and len(geometry) == 1:
+        
+        data = {'id': ['1'],
+                'geometry': geometry}
+        gdf = gpd.GeoDataFrame(data, crs = {'init': 'epsg:4326',  'no_defs': True})
 
-            for i, feat in enumerate(gdf.geometry.values[0]):
-                ids.append(i)
-                feats.append(feat)
-
-            gdf = gpd.GeoDataFrame({'id': ids,
-                                    'geometry': feats},
-                                        geometry='geometry',
-                                        crs = gdf.crs
-                                        )
+    # everything else (hopefully)
     else:
 
         i, ids, geoms = 1, [], []
-        for geom in loads(wkt):
+        for geom in geometry:
             ids.append(i)
             geoms.append(geom)
             i += 1
@@ -306,7 +315,7 @@ def wkt_to_gdf(wkt):
                                 'geometry': geoms},
                                 crs = {'init': 'epsg:4326',  'no_defs': True}
               )
-
+    
     return gdf
 
 
@@ -317,9 +326,9 @@ def wkt_to_shp(wkt, outfile):
 
 
 def gdf_to_json_geometry(gdf):
-    """Function to parse features from GeoDataFrame in such a manner
+    """Function to parse features from GeoDataFrame in such a manner 
        that rasterio wants them"""
-#
+#    
 #    try:
 #        gdf.geometry.values[0].type
 #        features = [json.loads(gdf.to_json())['features'][0]['geometry']]
@@ -330,12 +339,12 @@ def gdf_to_json_geometry(gdf):
 #            feats.append(feat)
 #
 #        gdf = gpd.GeoDataFrame({'id': ids,
-#                                'geometry': feats},
-#                                    geometry='geometry',
+#                                'geometry': feats}, 
+#                                    geometry='geometry', 
 #                                    crs = gdf.crs
 #                                    )
     geojson = json.loads(gdf.to_json())
-    return [feature['geometry'] for feature in geojson['features']
+    return [feature['geometry'] for feature in geojson['features'] 
             if feature['geometry']]
 
 
@@ -393,7 +402,7 @@ def buffer_shape(infile, outfile, buffer=None):
                 })
 
 
-def plot_inventory(aoi, inventory_df, transparency=0.05, annotate = False):
+def plot_inventory(aoi, inventory_df, transparency=0.05):
 
     import matplotlib.pyplot as plt
 
@@ -419,12 +428,3 @@ def plot_inventory(aoi, inventory_df, transparency=0.05, annotate = False):
     plt.xlim([bounds.minx.min()-2, bounds.maxx.max()+2])
     plt.ylim([bounds.miny.min()-2, bounds.maxy.max()+2])
     plt.grid(color='grey', linestyle='-', linewidth=0.2)
-    if annotate:
-        import math
-        for idx, row in inventory_df.iterrows():
-            # print([row['geometry'].bounds[0],row['geometry'].bounds[3]])
-            coord = [row['geometry'].centroid.x, row['geometry'].centroid.y]
-            x1, y2, x2, y1 = row['geometry'].bounds
-            angle = math.degrees(math.atan2((y2 - y1), (x2 - x1)))
-            # rint(angle)
-            plt.annotate(s=row['bid'], xy=coord, rotation=angle + 5, size=10, color='red', horizontalalignment='center')

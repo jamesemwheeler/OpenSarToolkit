@@ -8,7 +8,7 @@ from os.path import join as opj
 from ost.helpers import helpers as h
 
 
-def _calibration(infile, outfile, logfile, calibrate_to, ncores=os.cpu_count()):
+def _calibration(infile, outfile, logfile, calibrate_to):
     
     # transform calibration parameter to snap readable
     sigma0, beta0, gamma0 = 'false', 'false', 'false'
@@ -31,7 +31,7 @@ def _calibration(infile, outfile, logfile, calibrate_to, ncores=os.cpu_count()):
                    ' -PoutputGammaBand=\'{}\''
                    ' -PoutputSigmaBand=\'{}\''
                    ' -t \'{}\' \'{}\''.format(
-                          gpt_file, ncores,
+                          gpt_file, 2 * os.cpu_count(),
                           beta0, gamma0, sigma0,
                           outfile, infile)
     )
@@ -49,7 +49,7 @@ def _calibration(infile, outfile, logfile, calibrate_to, ncores=os.cpu_count()):
     return return_code
 
   
-def _multi_look(infile, outfile, logfile, rg_looks, az_looks, ncores=os.cpu_count()):
+def _multi_look(infile, outfile, logfile, rg_looks, az_looks):
     
     # get path to SNAP's command line executable gpt
     gpt_file = h.gpt_path()
@@ -62,7 +62,7 @@ def _multi_look(infile, outfile, logfile, rg_looks, az_looks, ncores=os.cpu_coun
                 ' -PnAzLooks={}'
                 ' -PnRgLooks={}'
                 ' -t \'{}\' {}'.format(
-                        gpt_file, ncores,
+                        gpt_file, 2 * os.cpu_count(), 
                         az_looks, rg_looks,
                         outfile, infile
                         )
@@ -81,7 +81,7 @@ def _multi_look(infile, outfile, logfile, rg_looks, az_looks, ncores=os.cpu_coun
     return return_code
 
             
-def _speckle_filter(infile, outfile, logfile, speckle_dict, ncores=os.cpu_count()):
+def _speckle_filter(infile, outfile, logfile, speckle_dict):
     '''A wrapper around SNAP's Lee-Sigma Speckle Filter
 
     This function takes OST imported Sentinel-1 product and applies
@@ -95,8 +95,6 @@ def _speckle_filter(infile, outfile, logfile, speckle_dict, ncores=os.cpu_count(
                  file written in BEAM-Dimap format
         logfile: string or os.path object for the file
                  where SNAP'S STDOUT/STDERR is written to
-        ncores (int): number of cpus used - useful for parallel processing
-
     '''
 
     # get path to SNAP's command line executable gpt
@@ -117,7 +115,7 @@ def _speckle_filter(infile, outfile, logfile, speckle_dict, ncores=os.cpu_count(
                   ' -PtargetWindowSizeStr=\"{}\"'
                   ' -PwindowSize=\"{}\"'
                   ' -t \'{}\' \'{}\''.format(
-                      gpt_file, ncores,
+                      gpt_file, 2 * os.cpu_count(),
                       speckle_dict['estimate ENL'],
                       speckle_dict['pan size'],
                       speckle_dict['damping'],
@@ -145,7 +143,7 @@ def _speckle_filter(infile, outfile, logfile, speckle_dict, ncores=os.cpu_count(
     return return_code
 
 
-def _terrain_flattening(infile, outfile, logfile, dem_dict, ncores=os.cpu_count()):
+def _terrain_flattening(infile, outfile, logfile, dem_dict):
     '''A wrapper around SNAP's terrain flattening
 
     This function takes OST calibrated Sentinel-1 SLC product and applies
@@ -158,8 +156,6 @@ def _terrain_flattening(infile, outfile, logfile, dem_dict, ncores=os.cpu_count(
                  file written in BEAM-Dimap format
         logfile: string or os.path object for the file
                  where SNAP'S STDOUT/STDERR is written to
-        ncores (int): number of cpus used - useful for parallel processing
-
 
     '''
 
@@ -183,7 +179,7 @@ def _terrain_flattening(infile, outfile, logfile, dem_dict, ncores=os.cpu_count(
                ' -PexternalDEMApplyEGM=\'{}\''
                ' -PdemResamplingMethod=\'{}\''
                ' -t {} {}'.format(
-                   gpt_file, ncores,
+                   gpt_file, 2 * os.cpu_count(), 
                    dem_dict['dem name'], dem_dict['dem file'], 
                    dem_dict['dem nodata'], 
                    str(dem_dict['egm correction']).lower(),
@@ -203,7 +199,7 @@ def _terrain_flattening(infile, outfile, logfile, dem_dict, ncores=os.cpu_count(
     return return_code
 
         
-def _linear_to_db(infile, outfile, logfile, ncores=os.cpu_count()):
+def _linear_to_db(infile, outfile, logfile):
     '''A wrapper around SNAP's linear to db routine
 
     This function takes an OST calibrated Sentinel-1 product
@@ -216,8 +212,6 @@ def _linear_to_db(infile, outfile, logfile, ncores=os.cpu_count()):
                  file written in BEAM-Dimap format
         logfile: string or os.path object for the file
                  where SNAP'S STDOUT/STDERR is written to
-        ncores (int): number of cpus used - useful for parallel processing
-
     '''
 
     # get path to SNAP's command line executable gpt
@@ -226,7 +220,7 @@ def _linear_to_db(infile, outfile, logfile, ncores=os.cpu_count()):
     print(' INFO: Converting the image to dB-scale.')
     # construct command string
     command = '{} LinearToFromdB -x -q {} -t \'{}\' {}'.format(
-        gpt_file, ncores, outfile, infile)
+        gpt_file, 2 * os.cpu_count(), outfile, infile)
 
     # run command and get return code
     return_code = h.run_command(command, logfile)
@@ -241,7 +235,7 @@ def _linear_to_db(infile, outfile, logfile, ncores=os.cpu_count()):
     return return_code
 
 
-def _terrain_correction(infile, outfile, logfile, resolution, dem_dict, ncores=os.cpu_count()):
+def _terrain_correction(infile, outfile, logfile, resolution, dem_dict):
     '''A wrapper around SNAP's Terrain Correction routine
 
     This function takes an OST calibrated Sentinel-1 product and
@@ -261,8 +255,6 @@ def _terrain_correction(infile, outfile, logfile, resolution, dem_dict, ncores=o
                        'SRTM 3sec'
                        'ASTER 1sec GDEM'
                        'ACE30'
-        ncores (int): number of cpus used - useful for parallel processing
-
 
     '''
 
@@ -283,7 +275,7 @@ def _terrain_correction(infile, outfile, logfile, resolution, dem_dict, ncores=o
             #' -PmapProjection={}'
             ' -PpixelSpacingInMeter={}'
             ' -t \'{}\' \'{}\''.format(
-                    gpt_file, ncores,
+                    gpt_file, 2 * os.cpu_count(), 
                     dem_dict['dem name'], dem_dict['dem resampling'],
                     dem_dict['dem file'], dem_dict['dem nodata'], 
                     str(dem_dict['egm correction']).lower(), 
@@ -305,7 +297,7 @@ def _terrain_correction(infile, outfile, logfile, resolution, dem_dict, ncores=o
     return return_code
 
 
-def _ls_mask(infile, outfile, logfile, resolution, dem_dict, ncores=os.cpu_count()):
+def _ls_mask(infile, outfile, logfile, resolution, dem_dict):
     '''A wrapper around SNAP's Layover/Shadow mask routine
 
     This function takes OST imported Sentinel-1 product and calculates
@@ -325,8 +317,6 @@ def _ls_mask(infile, outfile, logfile, resolution, dem_dict, ncores=os.cpu_count
                        'SRTM 3sec'
                        'ASTER 1sec GDEM'
                        'ACE30'
-        ncores (int): number of cpus used - useful for parallel processing
-
 
     '''
 
@@ -352,7 +342,7 @@ def _ls_mask(infile, outfile, logfile, resolution, dem_dict, ncores=os.cpu_count
                                  ' -Pimage_resampling=\'{}\''
                                  ' -Pegm_correction=\'{}\''
                                  ' -Poutput=\'{}\''.format(
-            gpt_file, graph, ncores, infile, resolution,
+            gpt_file, graph, 2 * os.cpu_count(), infile, resolution, 
             dem_dict['dem name'], dem_dict['dem file'], dem_dict['dem nodata'], 
             dem_dict['dem resampling'], dem_dict['image resampling'], 
             str(dem_dict['egm correction']).lower(), outfile)

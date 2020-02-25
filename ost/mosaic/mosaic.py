@@ -1,30 +1,14 @@
 # -*- coding: utf-8 -*-
 import os
 from os.path import join as opj
-import gdal
 import numpy as np
 import rasterio
 from ost.helpers import vector as vec
 from ost.helpers import helpers as h
 
 
-def mosaic_to_vrt(ts_dir, product, outfiles):
-    vrt_options = gdal.BuildVRTOptions(srcNodata=0, separate=True)
-    if type(outfiles) == str:
-        outfiles = outfiles.replace("'", '').strip('][').split(', ')
+def mosaic(filelist, outfile, temp_dir, cut_to_aoi=False):
 
-    gdal.BuildVRT(opj(ts_dir, '{}.Timeseries.vrt'.format(product)),
-                  outfiles,
-                  options=vrt_options)
-
-
-def mosaic(filelist, outfile, temp_dir, cut_to_aoi=False, ncores=os.cpu_count()):
-    if type(cut_to_aoi)==str:
-        if cut_to_aoi == 'False':
-            cut_to_aoi=False
-
-    if type(filelist) == list:
-        filelist=' '.join([str(elem) for elem in filelist])
     check_file = opj(
         os.path.dirname(outfile), '.{}.processed'.format(os.path.basename(outfile)[:-4])
     )
@@ -33,7 +17,7 @@ def mosaic(filelist, outfile, temp_dir, cut_to_aoi=False, ncores=os.cpu_count())
         os.path.dirname(outfile), '{}.errLog'.format(os.path.basename(outfile)[:-4])
     )
         
-    with rasterio.open(filelist.replace("'", '').replace(",", '').strip('][').split(' ')[0]) as src:
+    with rasterio.open(filelist.split(' ')[0]) as src:
         dtype = src.meta['dtype']
         dtype = 'float' if dtype == 'float32' else dtype
         
@@ -41,24 +25,25 @@ def mosaic(filelist, outfile, temp_dir, cut_to_aoi=False, ncores=os.cpu_count())
         tempfile = opj(temp_dir, os.path.basename(outfile))
     else: 
         tempfile = outfile
+        
     cmd = ('otbcli_Mosaic -ram 4096'
-                    ' -progress 1'
-                    ' -comp.feather large'
-                    ' -harmo.method band'
-                    ' -harmo.cost rmse'
-                    ' -tmpdir {}'
-                    ' -il {}'
-                    ' -out {} {}'.format(temp_dir, filelist.replace("'", '').replace(",", '').strip(']['),
-                                         tempfile, dtype)
+                        ' -progress 1'
+                        ' -comp.feather large'
+                        ' -harmo.method band'
+                        ' -harmo.cost rmse'
+                        ' -temp_dir {}'
+                        ' -il {}'
+                        ' -out {} {}'.format(temp_dir, filelist, 
+                                             tempfile, dtype)
     )
 
     return_code = h.run_command(cmd, logfile)
     if return_code != 0:
         if os.path.isfile(tempfile):
             os.remove(tempfile)
-
+                
         return
-
+    
     if cut_to_aoi:
         
         # get aoi ina way rasterio wants it

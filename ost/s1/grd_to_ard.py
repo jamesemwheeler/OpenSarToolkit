@@ -929,8 +929,8 @@ def grd_to_ard(filelist,
         
         multi_looked = opj(temp_dir, '{}_ml'.format(file_id))
         logfile = opj(output_dir, '{}.multilook.errLog'.format(file_id))
-        return_code = common._multi_look(infile, multi_looked, logfile,
-                                         ml_factor, ml_factor)
+        return_code = common._multi_look(infile, multi_looked, logfile, 
+                                        ml_factor, ml_factor)
         
         # delete input
         h.delete_dimap(infile[:-4])
@@ -948,8 +948,8 @@ def grd_to_ard(filelist,
     if  ard['create ls mask'] is True:
         ls_mask = opj(temp_dir, '{}.ls_mask'.format(file_id))
         logfile = opj(output_dir, '{}.ls_mask.errLog'.format(file_id))
-        return_code = common._ls_mask(infile, ls_mask, logfile, ard['resolution'],
-                                      ard['dem'])
+        return_code = common._ls_mask(infile, ls_mask, logfile, ard['resolution'], 
+                               ard['dem'])
         
         # delete output if command failed for some reason and return
         if return_code != 0:
@@ -981,8 +981,8 @@ def grd_to_ard(filelist,
         filtered = opj(temp_dir, '{}_spk'.format(file_id))
 
         # run processing
-        return_code = common._speckle_filter(infile, filtered, logfile,
-                                             ard['speckle filter'])
+        return_code = common._speckle_filter(infile, filtered, logfile, 
+                                          ard['speckle filter'])
         
         # delete input
         h.delete_dimap(infile[:-4])
@@ -1000,9 +1000,9 @@ def grd_to_ard(filelist,
     if ard['product type'] == 'RTC-gamma0':
         flattened = opj(temp_dir, '{}_flat'.format(file_id))
         logfile = opj(output_dir, '{}.tf.errLog'.format(file_id))
-        return_code = common._terrain_flattening(infile, flattened, logfile,
+        return_code = common._terrain_flattening(infile, flattened, logfile, 
                                                  ard['dem']
-                                                 )
+        )
         
         # delete input file
         h.delete_dimap(infile[:-4])
